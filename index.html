@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<!-- 樂活五線譜 Web v1.12 (2025-07-24) for iOS Safari fix -->
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>樂活五線譜-3.5年版</title>
+
+  <!-- iOS / PWA 基本設定 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="樂活五線譜" />
+  <meta name="theme-color" content="#007BFF" />
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png" />
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/icons/favicon.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png" />
+  <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#007BFF" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root { --vh: 1vh; }
+    html, body { height: 100%; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      padding: 10px;
+      box-sizing: border-box;
+      background-color: #f8f9fa;
+      max-width: 100vw;
+    }
+    .search-container {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      margin-bottom: 15px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    .search-container input {
+      padding: 12px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    .search-container button {
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      box-sizing: border-box;
+      color: #fff;
+      background-color: #007BFF;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .search-container > button:last-child:hover { background-color: #0056b3; }
+    .time-range-buttons {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+    }
+    .time-range-buttons .time-btn {
+      flex: 1;
+      padding: 10px 8px;
+      font-size: 14px;
+      border: 2px solid #999;
+      border-radius: 6px;
+      background-color: #e6e6e6 !important;
+      color: #444 !important;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s ease;
+    }
+    .time-range-buttons .time-btn:hover {
+      background-color: #d0d0d0 !important;
+      border-color: #777;
+    }
+    .time-range-buttons .time-btn.time-btn-active {
+      background-color: #8B0000 !important;
+      color: #fff !important;
+      border-color: #8B0000 !important;
+    }
+    #stockTitle {
+      display: none;
+      margin: 15px 0;
+      text-align: center;
+      font-size: clamp(18px, 5vw, 28px);
+      font-weight: bold;
+      color: #003366;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    #mainTitle {
+      text-align: center;
+      font-size: clamp(24px, 8vw, 48px);
+      font-weight: bold;
+      color: #003366;
+      margin: 20px 0 5px 0;
+    }
+    #versionInfo {
+      text-align: center;
+      font-size: clamp(16px, 3.5vw, 20px);
+      color: #2D08FC;
+      font-weight: bold;
+      margin: 0 0 20px 0;
+    }
+    #statusMessage {
+      text-align: center;
+      font-size: clamp(12px, 3vw, 16px);
+      color: #003366;
+      font-weight: bold;
+      margin: 15px 0;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    #statusMessage .query-date { color: #FF4500; }
+    #statusMessage .data-date { color: #007BFF; }
+    .container {
+      width: 100%;
+      max-width: 100%;
+      margin: 0 auto;
+      text-align: center;
+      display: none;
+      background-color: #fff;
+      border-radius: 12px;
+      padding: 15px;
+      box-sizing: border-box;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 100%;
+      height: calc(var(--vh) * 60);
+      min-height: 300px;
+      max-height: 500px;
+      box-sizing: border-box;
+    }
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    @media (max-width: 768px) {
+      body { padding: 8px; }
+      .search-container { margin-bottom: 10px; }
+      .search-container input, .search-container button { padding: 14px; font-size: 16px; }
+      .container { padding: 10px; border-radius: 8px; }
+      .time-range-buttons { gap: 3px; }
+      .time-btn { padding: 8px 6px; font-size: 12px; border-width: 1.5px; }
+      .chart-wrapper { height: calc(var(--vh) * 50); min-height: 280px; }
+      #stockTitle { font-size: 16px; margin: 10px 0; }
+      #mainTitle { font-size: 28px; margin: 15px 0 5px 0; }
+      #versionInfo { font-size: 16px; margin: 0 0 15px 0; }
+      #statusMessage { font-size: 12px; padding: 8px; margin: 10px 0; }
+    }
+    @media (max-width: 480px) {
+      .chart-wrapper { height: calc(var(--vh) * 45); min-height: 250px; }
+      #stockTitle { font-size: 14px; }
+      #mainTitle { font-size: 24px; }
+      #versionInfo { font-size: 14px; }
+      #statusMessage { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="search-container">
+    <input type="text" id="symbolInput" placeholder="輸入股票代碼 (如 2330.TW)" />
+    <div class="time-range-buttons">
+      <button class="time-btn" data-years="3.0">3.0年</button>
+      <button class="time-btn time-btn-active" data-years="3.5">3.5年</button>
+      <button class="time-btn" data-years="10">10年</button>
+    </div>
+    <button id="drawBtn">繪製樂活五線譜</button>
+  </div>
+
+  <div id="mainTitle">樂活五線譜</div>
+  <div id="versionInfo">Web v1.12 (2025-07-24)</div>
+  <h1 id="stockTitle">樂活五線譜-3.5年版</h1>
+  <div id="statusMessage"></div>
+
+  <div class="container" id="chartContainer">
+    <div class="chart-wrapper">
+      <canvas id="stockChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    function setVh() {
+      document.documentElement.style.setProperty('--vh', `${window.innerHeight * 0.01}px`);
+    }
+    window.addEventListener('resize', setVh);
+    window.addEventListener('orientationchange', () => setTimeout(setVh, 300));
+    setVh();
+
+    let chartInstance = null;
+    let selectedYears = 3.5;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const timeButtons = document.querySelectorAll('.time-btn');
+      timeButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+          timeButtons.forEach(b => b.classList.remove('time-btn-active'));
+          this.classList.add('time-btn-active');
+          selectedYears = parseFloat(this.dataset.years);
+        });
+      });
+      document.getElementById('drawBtn').addEventListener('click', fetchStockData);
+    });
+
+    async function fetchStockData() {
+      const symbol = document.getElementById('symbolInput').value.toUpperCase();
+      if (!symbol) { alert('請輸入股票代碼'); return; }
+
+      updateStatus('取得股價中...');
+      clearPreviousChart();
+      document.getElementById('mainTitle').style.display = 'none';
+      document.getElementById('stockTitle').style.display = 'block';
+
+      try {
+        const base = '/y/';
+        const range = (selectedYears >= 10) ? '10y' : '5y';
+
+        const apiUrl1 = `${base}v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=${range}`;
+        let response1 = await fetch(apiUrl1);
+        if (!response1.ok) {
+          const proxy = 'https://corsproxy.io/?';
+          response1 = await fetch(`${proxy}https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=${range}`);
+        }
+        const jsonData1 = await response1.json();
+        if (!jsonData1.chart || !jsonData1.chart.result) { updateStatus('獲取歷史數據失敗，請檢查股票代碼是否正確'); return; }
+
+        const result = jsonData1.chart.result[0];
+        const timestamps = result.timestamp;
+        const closes = result.indicators.quote[0].close;
+        if (!timestamps || !closes) { updateStatus('無法獲取收盤價數據'); return; }
+
+        const apiUrl2 = `${base}v1/finance/quoteType/${encodeURIComponent(symbol)}?formatted=true&lang=zh-Hant-HK&region=HK`;
+        let response2 = await fetch(apiUrl2);
+        if (!response2.ok) {
+          const proxy = 'https://corsproxy.io/?';
+          response2 = await fetch(`${proxy}https://query1.finance.yahoo.com/v1/finance/quoteType/${encodeURIComponent(symbol)}?formatted=true&lang=zh-Hant-HK&region=HK`);
+        }
+        const jsonData2 = await response2.json();
+
+        let stockName = symbol;
+        if (jsonData2.quoteType?.result?.length > 0) {
+          const quote = jsonData2.quoteType.result[0];
+          stockName = quote.longName || quote.shortName || symbol;
+        }
+
+        const data = timestamps.map((ts, i) => {
+          const close = closes[i];
+          if (close == null || isNaN(close)) return null;
+          return {
+            date: new Date(ts * 1000).toISOString().split('T')[0],
+            close: parseFloat(close).toFixed(2)
+          };
+        }).filter(Boolean);
+
+        const today = new Date();
+        const endDate = today.toISOString().split('T')[0];
+        const startDate = new Date();
+        if (selectedYears === 10) {
+          startDate.setFullYear(startDate.getFullYear() - 10);
+        } else if (selectedYears === 3.0) {
+          startDate.setFullYear(startDate.getFullYear() - 3);
+        } else {
+          startDate.setFullYear(startDate.getFullYear() - 3);
+          startDate.setMonth(startDate.getMonth() - 6);
+        }
+        const startDateStr = startDate.toISOString().split('T')[0];
+        const filteredData = data.filter(d => d.date >= startDateStr && d.date <= endDate);
+
+        drawChart({ stockName, stockData: filteredData });
+      } catch (err) {
+        updateStatus('API 無法獲取數據，請稍後再試');
+        console.error(err);
+      }
+    }
+
+    function updateStatus(message) {
+      document.getElementById('statusMessage').innerHTML = message;
+    }
+
+    function clearPreviousChart() {
+      document.getElementById('chartContainer').style.display = 'block';
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+      const wrapper = document.querySelector('.chart-wrapper');
+      const oldCanvas = document.getElementById('stockChart');
+      const newCanvas = document.createElement('canvas');
+      newCanvas.id = 'stockChart';
+      wrapper.replaceChild(newCanvas, oldCanvas);
+    }
+
+    function drawChart(response) {
+      if (!response || response.error) return;
+      if (!response.stockData || response.stockData.length === 0) { updateStatus('數據點不足'); return; }
+
+      const stockName = response.stockName;
+      const data = response.stockData;
+      const title = document.getElementById('stockTitle');
+      title.innerHTML = `${stockName} (${document.getElementById('symbolInput').value.toUpperCase()}) - 樂活五線譜-${selectedYears}年版`;
+
+      const dates = data.map(e => e.date);
+      const closes = data.map(e => parseFloat(e.close));
+      if (closes.length < 10) { updateStatus('數據點不足，無法繪製五線譜'); return; }
+
+      const trendLine = calculateTrendLine(closes);
+      const errors = closes.map((v, i) => v - trendLine[i]);
+      let stdDev = calculateStandardDeviation(errors);
+      const priceRange = Math.max(...closes) - Math.min(...closes);
+      const minStdDev = priceRange * 0.02;
+      if (stdDev < minStdDev) stdDev = minStdDev;
+
+      const trendPlus1  = trendLine.map(y => y + stdDev);
+      const trendMinus1 = trendLine.map(y => y - stdDev);
+      const trendPlus2  = trendLine.map(y => y + 2 * stdDev);
+      const trendMinus2 = trendLine.map(y => y - 2 * stdDev);
+
+      const ctx = document.getElementById('stockChart').getContext('2d');
+      const isMobile = window.innerWidth <= 768;
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            { label: '收盤價', data: closes, borderColor: 'rgba(0,0,255,1)', borderWidth: isMobile ? 2 : 3, tension: 0.3, pointRadius: 0, fill: false },
+            { label: '趨勢線', data: trendLine, borderColor: 'rgba(255,99,132,1)', borderWidth: isMobile ? 1.5 : 2, tension: 0.1, pointRadius: 0, fill: false },
+            { label: '+1σ', data: trendPlus1, borderColor: 'rgba(255,165,0,1)', borderWidth: 1, pointRadius: 0, fill: false },
+            { label: '-1σ', data: trendMinus1, borderColor: 'rgba(255,165,0,1)', borderWidth: 1, pointRadius: 0, fill: false },
+            { label: '+2σ', data: trendPlus2, borderColor: 'rgba(50,205,50,1)', borderWidth: 1, pointRadius: 0, fill: false },
+            { label: '-2σ', data: trendMinus2, borderColor: 'rgba(50,205,50,1)', borderWidth: 1, pointRadius: 0, fill: false }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          layout: { padding: { left: 10, right: 20, top: 10, bottom: 10 } },
+          interaction: { intersect: false, mode: 'index' },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                boxWidth: isMobile ? 15 : 20,
+                boxHeight: 2,
+                font: { size: isMobile ? 10 : 14, weight: 'bold' },
+                padding: isMobile ? 8 : 15
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              titleFont: { size: isMobile ? 10 : 12 },
+              bodyFont: { size: isMobile ? 9 : 11 }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: !isMobile, text: '日期', font: { size: isMobile ? 10 : 12 } },
+              ticks: {
+                callback: function(value, index) {
+                  const totalDays = dates.length;
+                  const monthsToShow = selectedYears * 2;
+                  const skipRate = Math.floor(totalDays / monthsToShow);
+                  const finalSkipRate = Math.max(30, Math.min(180, skipRate));
+                  if (index === 0 || index === dates.length - 1 || index % finalSkipRate === 0) {
+                    return dates[index].substring(5);
+                  }
+                  return '';
+                },
+                maxRotation: 45,
+                minRotation: 45,
+                autoSkip: false,
+                font: { size: isMobile ? 8 : 10 }
+              },
+              grid: {
+                display: true,
+                color: function(context) {
+                  const index = context.index;
+                  const totalDays = dates.length;
+                  const monthsToShow = selectedYears * 2;
+                  const skipRate = Math.floor(totalDays / monthsToShow);
+                  const finalSkipRate = Math.max(30, Math.min(180, skipRate));
+                  if (index === 0 || index === totalDays - 1 || index % finalSkipRate === 0) {
+                    return 'rgba(0,0,0,0.1)';
+                  }
+                  return 'rgba(0,0,0,0)';
+                },
+                lineWidth: 1
+              }
+            },
+            y: {
+              title: { display: !isMobile, text: '收盤價', font: { size: isMobile ? 10 : 12 } },
+              ticks: { font: { size: isMobile ? 8 : 10 } },
+              grid: { color: 'rgba(0,0,0,0.1)' }
+            }
+          }
+        }
+      });
+
+      const lastDataDate = dates[dates.length - 1];
+      updateStatus(`<span class="query-date">查詢日期: ${getTodayInTaipei()}</span> | <span class="data-date">資料日期: ${lastDataDate}</span>`);
+    }
+
+    function calculateTrendLine(arr) {
+      let n = arr.length;
+      if (n === 0) return [];
+      const valid = arr.filter(v => isFinite(v));
+      if (valid.length < 2) return arr.map(() => 0);
+
+      n = valid.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+      for (let i = 0; i < n; i++) {
+        sumX += i;
+        sumY += valid[i];
+        sumXY += i * valid[i];
+        sumXX += i * i;
+      }
+      const den = (n * sumXX - sumX * sumX);
+      if (!den) {
+        const avg = sumY / n;
+        return arr.map(() => avg);
+      }
+      const slope = (n * sumXY - sumX * sumY) / den;
+      const intercept = (sumY - slope * sumX) / n;
+      return arr.map((_, i) => slope * i + intercept);
+    }
+
+    function calculateStandardDeviation(errors) {
+      const valid = errors.filter(v => isFinite(v));
+      if (valid.length === 0) return 0;
+      const n = valid.length;
+      const mean = valid.reduce((s, v) => s + v, 0) / n;
+      const variance = valid.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / n;
+      return Math.sqrt(variance);
+    }
+
+    function getTodayInTaipei() {
+      const today = new Date();
+      const taipeiDate = new Date(today.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+      const y = taipeiDate.getFullYear();
+      const m = String(taipeiDate.getMonth() + 1).padStart(2, '0');
+      const d = String(taipeiDate.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    window.addEventListener('resize', () => {
+      if (chartInstance) setTimeout(() => chartInstance.resize(), 100);
+    });
+    window.addEventListener('orientationchange', () => {
+      setTimeout(() => { if (chartInstance) chartInstance.resize(); }, 500);
+    });
+  </script>
+</body>
+</html>
